@@ -21,6 +21,7 @@ Usage:
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -52,7 +53,6 @@ def probe_video(video_path):
         [ffmpeg, "-i", video_path],
         capture_output=True, text=True
     )
-    import re
     width = height = None
     fps = 30.0
     for line in (result.stdout + result.stderr).split("\n"):

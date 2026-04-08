@@ -18,6 +18,7 @@ mask video is provided, the encoder produces a standard H.264 stream.
 import argparse
 import hashlib
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -86,7 +87,6 @@ def encode_with_privacy(input_video, mask_video, output_file,
     width, height = None, None
     for line in (probe.stdout + probe.stderr).split("\n"):
         if "Video:" in line:
-            import re
             m = re.search(r"(\d{2,5})x(\d{2,5})", line)
             if m:
                 width, height = int(m.group(1)), int(m.group(2))
