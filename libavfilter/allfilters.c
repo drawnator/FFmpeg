@@ -416,6 +416,7 @@ extern const FFFilter ff_vf_pp7;
 extern const FFFilter ff_vf_premultiply;
 extern const FFFilter ff_vf_premultiply_dynamic;
 extern const FFFilter ff_vf_prewitt;
+extern const FFFilter ff_vf_privacy_mask;
 extern const FFFilter ff_vf_prewitt_opencl;
 extern const FFFilter ff_vf_procamp_vaapi;
 extern const FFFilter ff_vf_program_opencl;

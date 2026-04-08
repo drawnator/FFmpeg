@@ -135,6 +135,7 @@ enum SEIType {
     SEI_TYPE_ANNOTATED_REGIONS                           = 202,
     SEI_TYPE_SUBPIC_LEVEL_INFO                           = 203,
     SEI_TYPE_SAMPLE_ASPECT_RATIO_INFO                    = 204,
+    SEI_TYPE_PRIVACY_METADATA                            = 210,
 };
 
 /**
