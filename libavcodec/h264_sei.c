@@ -57,6 +57,10 @@ void ff_h264_sei_uninit(H264SEIContext *h)
     h->common.frame_packing.present       = 0;
     h->common.display_orientation.present = 0;
 
+    av_freep(&h->privacy_metadata.encrypted_mask_data);
+    h->privacy_metadata.encrypted_mask_data_size = 0;
+    h->privacy_metadata.present = 0;
+
     ff_h2645_sei_reset(&h->common);
 }
 
@@ -226,6 +230,73 @@ static int decode_green_metadata(H264SEIGreenMetaData *h, GetByteContext *gb)
     return 0;
 }
 
+static int decode_privacy_metadata(H264SEIPrivacyMetadata *h,
+                                   GetBitContext *gb, GetByteContext *gbyte,
+                                   void *logctx)
+{
+    int size, i;
+
+    h->privacy_metadata_id = get_ue_golomb_long(gb);
+    h->privacy_metadata_cancel_flag = get_bits1(gb);
+
+    if (!h->privacy_metadata_cancel_flag) {
+        /* Re-sync gbyte to the current bit position (byte-aligned) */
+        int consumed_bytes = (get_bits_count(gb) + 7) / 8;
+        int total = bytestream2_get_bytes_left(gbyte);
+
+        if (consumed_bytes > total) {
+            av_log(logctx, AV_LOG_ERROR, "Privacy metadata SEI truncated\n");
+            return AVERROR_INVALIDDATA;
+        }
+        bytestream2_skipu(gbyte, consumed_bytes);
+
+        if (bytestream2_get_bytes_left(gbyte) < 18) {
+            av_log(logctx, AV_LOG_ERROR,
+                   "Privacy metadata SEI too small for header\n");
+            return AVERROR_INVALIDDATA;
+        }
+
+        h->mask_encryption_algorithm = bytestream2_get_byte(gbyte);
+        for (i = 0; i < 16; i++)
+            h->key_id[i] = bytestream2_get_byte(gbyte);
+        h->obfuscation_type = bytestream2_get_byte(gbyte);
+
+        size = bytestream2_get_bytes_left(gbyte);
+        if (size < 0) {
+            av_log(logctx, AV_LOG_ERROR, "Privacy metadata mask data invalid\n");
+            return AVERROR_INVALIDDATA;
+        }
+
+        av_freep(&h->encrypted_mask_data);
+        if (size > 0) {
+            h->encrypted_mask_data = av_malloc(size);
+            if (!h->encrypted_mask_data)
+                return AVERROR(ENOMEM);
+            bytestream2_get_bufferu(gbyte, h->encrypted_mask_data, size);
+            h->encrypted_mask_data_size = size;
+        } else {
+            h->encrypted_mask_data_size = 0;
+        }
+
+        /* repetition_period is encoded after the mask data via exp-golomb
+         * in the original bitstream, but for simplicity we encode it as
+         * the last byte of the SEI before the mask data block.  When the
+         * mask_encryption_algorithm is 0 (no encryption), the mask data
+         * is just raw RLE bytes. */
+        h->repetition_period = 0;
+    }
+
+    h->present = 1;
+
+    av_log(logctx, AV_LOG_DEBUG,
+           "Privacy metadata SEI: id=%u cancel=%d algo=%u obfusc=%u mask_size=%d\n",
+           h->privacy_metadata_id, h->privacy_metadata_cancel_flag,
+           h->mask_encryption_algorithm, h->obfuscation_type,
+           h->encrypted_mask_data_size);
+
+    return 0;
+}
+
 int ff_h264_sei_decode(H264SEIContext *h, GetBitContext *gb,
                        const H264ParamSets *ps, void *logctx)
 {
@@ -278,6 +349,10 @@ int ff_h264_sei_decode(H264SEIContext *h, GetBitContext *gb,
             break;
         case SEI_TYPE_GREEN_METADATA:
             ret = decode_green_metadata(&h->green_metadata, &gbyte_payload);
+            break;
+        case SEI_TYPE_PRIVACY_METADATA:
+            ret = decode_privacy_metadata(&h->privacy_metadata,
+                                          &gb_payload, &gbyte_payload, logctx);
             break;
         default:
             ret = ff_h2645_sei_message_decode(&h->common, type, AV_CODEC_ID_H264,

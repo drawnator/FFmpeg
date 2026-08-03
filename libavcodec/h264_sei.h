@@ -116,12 +116,33 @@ typedef struct H264SEIGreenMetaData {
     uint16_t xsd_metric_value;
 } H264SEIGreenMetaData;
 
+/**
+ * Privacy metadata SEI message for selective region obfuscation.
+ *
+ * This structure carries encrypted mask data identifying privacy-sensitive
+ * regions (e.g., faces, license plates) within the video frame. Decoders
+ * with the proper decryption key can reconstruct the original video, while
+ * unauthorized decoders can apply obfuscation to the masked regions.
+ */
+typedef struct H264SEIPrivacyMetadata {
+    int present;
+    unsigned privacy_metadata_id;       ///< Identifies the privacy metadata instance
+    int privacy_metadata_cancel_flag;   ///< Cancels persistence of previous metadata
+    uint8_t mask_encryption_algorithm;  ///< 0=none, 1=AES-128-CBC, 2=AES-256-CBC
+    uint8_t key_id[16];                 ///< Identifier for the decryption key
+    uint8_t *encrypted_mask_data;       ///< Compressed and encrypted mask data
+    int encrypted_mask_data_size;       ///< Size of encrypted_mask_data in bytes
+    unsigned repetition_period;         ///< Persistence across frames (0=this frame only)
+    uint8_t obfuscation_type;           ///< 0=pixelate, 1=blur, 2=black, 3=color_invert
+} H264SEIPrivacyMetadata;
+
 typedef struct H264SEIContext {
     H2645SEI common;
     H264SEIPictureTiming picture_timing;
     H264SEIRecoveryPoint recovery_point;
     H264SEIBufferingPeriod buffering_period;
     H264SEIGreenMetaData green_metadata;
+    H264SEIPrivacyMetadata privacy_metadata;
 } H264SEIContext;
 
 struct H264ParamSets;

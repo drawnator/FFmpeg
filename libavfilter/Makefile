@@ -445,6 +445,7 @@ OBJS-$(CONFIG_PP7_FILTER)                    += vf_pp7.o qp_table.o
 OBJS-$(CONFIG_PREMULTIPLY_DYNAMIC_FILTER)    += vf_premultiply.o framesync.o
 OBJS-$(CONFIG_PREMULTIPLY_FILTER)            += vf_premultiply.o framesync.o
 OBJS-$(CONFIG_PREWITT_FILTER)                += vf_convolution.o
+OBJS-$(CONFIG_PRIVACY_MASK_FILTER)           += vf_privacy_mask.o
 OBJS-$(CONFIG_PREWITT_OPENCL_FILTER)         += vf_convolution_opencl.o opencl.o \
                                                 opencl/convolution.o
 OBJS-$(CONFIG_PROCAMP_VAAPI_FILTER)          += vf_procamp_vaapi.o vaapi_vpp.o
